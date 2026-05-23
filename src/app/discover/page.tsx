@@ -8,18 +8,157 @@ import { getVenuesForMatch } from "@/data/venues";
 import { Venue, Match } from "@/types";
 import {
   Search, Compass, ShieldCheck, MapPin, Users, Flame,
-  ExternalLink, Star, AlertTriangle, ChevronDown, Clock, Zap,
+  Star, AlertTriangle, ChevronDown, Clock, Zap, PhoneCall,
+  CheckCircle2, Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ConciergeCallSimulator } from "@/components/ConciergeCallSimulator";
 
 type Filter = "All" | "Verified Only" | "Near Me";
+type RsvpStatus = "idle" | "calling" | "confirmed" | "full";
 
 const FILTER_COLORS: Record<Filter, { text: string; bg: string; border: string }> = {
   "All":          { text: "#ccff00",  bg: "rgba(204,255,0,0.12)",   border: "rgba(204,255,0,0.3)" },
   "Verified Only":{ text: "#60a5fa",  bg: "rgba(96,165,250,0.1)",   border: "rgba(96,165,250,0.28)" },
   "Near Me":      { text: "#f59e0b",  bg: "rgba(245,158,11,0.1)",   border: "rgba(245,158,11,0.28)" },
 };
+
+function RSVPCaller({ matchName }: { matchName: string }) {
+  const [statuses, setStatuses] = useState<Record<string, RsvpStatus>>({});
+  const venues = getVenuesForMatch(
+    MATCHES.find((m) => m.status === "live")?.id ?? MATCHES[0].id
+  ).slice(0, 3);
+
+  const handleRSVP = (id: string) => {
+    if (statuses[id]) return;
+    setStatuses((p) => ({ ...p, [id]: "calling" }));
+    setTimeout(() => {
+      setStatuses((p) => ({
+        ...p,
+        [id]: Math.random() > 0.25 ? "confirmed" : "full",
+      }));
+    }, 1800 + Math.random() * 800);
+  };
+
+  const allDone = venues.length > 0 && venues.every((v) => statuses[v.id] === "confirmed" || statuses[v.id] === "full");
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: "linear-gradient(160deg, rgba(204,255,0,0.06) 0%, rgba(10,18,8,0.88) 100%)",
+        border: "1px solid rgba(204,255,0,0.2)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="px-4 pt-4 pb-3 flex items-center justify-between gap-3"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: "rgba(204,255,0,0.12)",
+              border: "1px solid rgba(204,255,0,0.3)",
+              boxShadow: "0 0 12px rgba(204,255,0,0.1)",
+            }}
+          >
+            <PhoneCall className="w-4.5 h-4.5" style={{ color: "#ccff00", width: 18, height: 18 }} />
+          </div>
+          <div>
+            <p className="text-[13px] font-extrabold leading-tight" style={{ color: "#f5f9f3" }}>
+              RSVP Caller
+            </p>
+            <p className="text-[10px] font-mono mt-0.5" style={{ color: "#7a8a75" }}>
+              Live availability check · {matchName}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {allDone ? (
+            <span className="chip chip-green">
+              <CheckCircle2 className="w-3 h-3" />
+              Done
+            </span>
+          ) : (
+            <span className="chip chip-neon">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#ccff00", animation: "live-pulse 1.4s infinite" }} />
+              Lines Open
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Venue RSVP rows */}
+      <div className="p-3 space-y-2">
+        {venues.map((v, i) => {
+          const status = statuses[v.id] ?? "idle";
+          return (
+            <motion.div
+              key={v.id}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+              style={{
+                background: status === "confirmed"
+                  ? "rgba(204,255,0,0.06)"
+                  : status === "full"
+                  ? "rgba(255,59,48,0.05)"
+                  : "rgba(255,255,255,0.03)",
+                border: status === "confirmed"
+                  ? "1px solid rgba(204,255,0,0.18)"
+                  : status === "full"
+                  ? "1px solid rgba(255,59,48,0.18)"
+                  : "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              {/* Rank */}
+              <div className="rank-badge flex-shrink-0">#{i + 1}</div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-bold truncate" style={{ color: "#f5f9f3" }}>{v.name}</p>
+                <p className="text-[9.5px] font-mono mt-0.5" style={{ color: "#7a8a75" }}>
+                  {v.density} density · {v.departureCountdown}m away
+                </p>
+              </div>
+
+              {/* Status / CTA */}
+              <div className="flex-shrink-0">
+                {status === "idle" && (
+                  <button
+                    onClick={() => handleRSVP(v.id)}
+                    className="chip chip-neon cursor-pointer"
+                    style={{ padding: "5px 12px", fontSize: "9.5px" }}
+                  >
+                    RSVP
+                  </button>
+                )}
+                {status === "calling" && (
+                  <span className="chip chip-amber">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Calling…
+                  </span>
+                )}
+                {status === "confirmed" && (
+                  <span className="chip chip-green">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Confirmed
+                  </span>
+                )}
+                {status === "full" && (
+                  <span className="chip chip-live">Fully Booked</span>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function DiscoverPage() {
   const router = useRouter();
@@ -29,6 +168,7 @@ export default function DiscoverPage() {
   const [filter,     setFilter]     = useState<Filter>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading,    setLoading]    = useState(false);
+
   const activeMatch = selectedMatch ?? MATCHES.find((m) => m.status === "live") ?? MATCHES[0];
   const venues = getVenuesForMatch(activeMatch.id);
 
@@ -68,26 +208,17 @@ export default function DiscoverPage() {
     return "#7a8a75";
   };
 
-  const densityPct  = (d: string) => ({ "Packed": 96, "High": 78, "Medium": 55, "Low": 32 }[d] ?? 50);
-
-  const callTargets = filtered.slice(0, 5);
-
-  const scrollToRankings = () => {
-    document.getElementById("venue_list_anchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const densityPct = (d: string) => ({ "Packed": 96, "High": 78, "Medium": 55, "Low": 32 }[d] ?? 50);
 
   return (
     <div className="page-enter pb-6">
       <div className="page-container pt-5 space-y-5">
 
-        {/* ══ Signature: Venue Concierge Calls ══ */}
-        <div id="concierge_calls_anchor">
-          <ConciergeCallSimulator
-            key={`${activeMatch.id}-${callTargets.length}`}
-            venues={callTargets.length > 0 ? callTargets : venues.slice(0, 5)}
-            onComplete={scrollToRankings}
-          />
-        </div>
+        {/* ══ RSVP Caller — Signature Feature ══ */}
+        <RSVPCaller
+          key={activeMatch.id}
+          matchName={`${activeMatch.homeTeam} vs ${activeMatch.awayTeam}`}
+        />
 
         {/* ══ Section header ══ */}
         <div className="flex items-center justify-between">
@@ -119,36 +250,28 @@ export default function DiscoverPage() {
                     ? `linear-gradient(160deg, ${match.homeColor}18 0%, ${match.awayColor}12 100%), rgba(20,32,16,0.9)`
                     : "rgba(10,18,8,0.65)",
                   border: isSel
-                    ? `1px solid rgba(204,255,0,0.35)`
+                    ? "1px solid rgba(204,255,0,0.35)"
                     : "1px solid rgba(255,255,255,0.055)",
                   boxShadow: isSel ? "0 10px 28px rgba(0,0,0,0.45)" : "none",
                 }}
               >
-                {/* Top neon accent line */}
+                {/* Top gradient accent */}
                 {isSel && (
                   <div
                     className="absolute top-0 left-0 right-0 h-0.5"
                     style={{
                       background: `linear-gradient(90deg, ${match.homeColor}, #ccff00 50%, ${match.awayColor})`,
-                      opacity: 0.8,
+                      opacity: 0.85,
                     }}
                   />
                 )}
 
-                {/* League + status row */}
+                {/* League + status */}
                 <div className="flex items-center justify-between mb-3">
-                  <span
-                    className="chip chip-sage"
-                    style={{ fontSize: "8.5px" }}
-                  >
-                    {match.league}
-                  </span>
+                  <span className="chip chip-sage" style={{ fontSize: "8.5px" }}>{match.league}</span>
                   {match.status === "live" ? (
                     <span className="chip chip-live">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ background: "#ff3b30", animation: "live-pulse 1.4s infinite" }}
-                      />
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#ff3b30", animation: "live-pulse 1.4s infinite" }} />
                       {match.minute}′
                     </span>
                   ) : match.status === "finished" ? (
@@ -169,18 +292,12 @@ export default function DiscoverPage() {
                     <div key={ti} className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-[18px] leading-none flex-shrink-0">{flag}</span>
-                        <span
-                          className="text-[13px] font-semibold truncate"
-                          style={{ color: isSel ? "#f5f9f3" : "#9aaa93" }}
-                        >
+                        <span className="text-[13px] font-semibold truncate" style={{ color: isSel ? "#f5f9f3" : "#9aaa93" }}>
                           {team}
                         </span>
                       </div>
                       {match.status !== "upcoming" && (
-                        <span
-                          className="text-sm font-mono font-extrabold flex-shrink-0"
-                          style={{ color: isSel ? color || "#f5f9f3" : "#9aaa93" }}
-                        >
+                        <span className="text-sm font-mono font-extrabold flex-shrink-0" style={{ color: isSel ? color || "#f5f9f3" : "#9aaa93" }}>
                           {score}
                         </span>
                       )}
@@ -194,9 +311,7 @@ export default function DiscoverPage() {
                   style={{ borderTop: "1px solid rgba(255,255,255,0.05)", color: "#7a8a75" }}
                 >
                   <span>📍 {match.venueCity}</span>
-                  <span style={{ color: isSel ? "#ccff00" : "#7a8a75" }}>
-                    {match.tournament.replace("FIFA ", "")}
-                  </span>
+                  <span style={{ color: isSel ? "#ccff00" : "#7a8a75" }}>{match.tournament.replace("FIFA ", "")}</span>
                 </div>
               </motion.button>
             );
@@ -208,12 +323,8 @@ export default function DiscoverPage() {
           className="rounded-2xl p-4 space-y-3"
           style={{ background: "rgba(10,18,8,0.55)", border: "1px solid rgba(255,255,255,0.05)" }}
         >
-          {/* Search bar */}
           <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: "#7a8a75" }}
-            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#7a8a75" }} />
             <input
               type="text"
               placeholder="Search venues, areas, affiliations…"
@@ -230,11 +341,9 @@ export default function DiscoverPage() {
               onBlur={(e)  => (e.target.style.borderColor = "rgba(255,255,255,0.07)")}
             />
           </div>
-
-          {/* Filter pills */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {(["All", "Verified Only", "Near Me"] as Filter[]).map((f) => {
-              const col = FILTER_COLORS[f];
+              const col    = FILTER_COLORS[f];
               const active = filter === f;
               return (
                 <button
@@ -255,13 +364,11 @@ export default function DiscoverPage() {
           </div>
         </div>
 
-        {/* ══ List header — Verified Venue Ranking ══ */}
+        {/* ══ Verified Venue Ranking header ══ */}
         <div id="venue_list_anchor" className="flex items-center justify-between scroll-mt-24">
           <div className="flex items-center gap-2">
             <span className="label-mono">Verified Venue Ranking</span>
-            <span className="chip chip-blue" style={{ fontSize: "8px" }}>
-              {filtered.length} hubs
-            </span>
+            <span className="chip chip-blue" style={{ fontSize: "8px" }}>{filtered.length} hubs</span>
           </div>
           <div className="flex items-center gap-1 text-[9.5px] font-mono" style={{ color: "#7a8a75" }}>
             <Flame className="w-3 h-3" style={{ color: "#f59e0b" }} />
@@ -273,24 +380,16 @@ export default function DiscoverPage() {
         {loading ? (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="rounded-2xl animate-shimmer"
-                style={{ height: 110, border: "1px solid rgba(255,255,255,0.05)" }}
-              />
+              <div key={i} className="rounded-2xl animate-shimmer" style={{ height: 110, border: "1px solid rgba(255,255,255,0.05)" }} />
             ))}
           </div>
 
         ) : filtered.length === 0 ? (
-          /* ══ Empty state ══ */
           <div
             className="rounded-2xl py-12 px-6 text-center flex flex-col items-center"
             style={{ background: "rgba(10,18,8,0.5)", border: "1px dashed rgba(255,255,255,0.1)" }}
           >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)" }}
-            >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)" }}>
               <AlertTriangle className="w-6 h-6" style={{ color: "#f59e0b" }} />
             </div>
             <h4 className="text-sm font-bold mb-1.5" style={{ color: "#f5f9f3" }}>No venues found</h4>
@@ -307,7 +406,6 @@ export default function DiscoverPage() {
           </div>
 
         ) : (
-          /* ══ Venue Cards ══ */
           <div className="space-y-3">
             {filtered.map((venue, idx) => {
               const isOpen = expandedId === venue.id;
@@ -324,50 +422,32 @@ export default function DiscoverPage() {
                   onClick={() => setExpandedId(isOpen ? null : venue.id)}
                   className="rounded-2xl cursor-pointer overflow-hidden relative"
                   style={{
-                    background: isOpen
-                      ? "rgba(20,32,16,0.88)"
-                      : "rgba(10,18,8,0.6)",
-                    border: isOpen
-                      ? "1px solid rgba(204,255,0,0.28)"
-                      : "1px solid rgba(255,255,255,0.048)",
+                    background: isOpen ? "rgba(20,32,16,0.88)" : "rgba(10,18,8,0.6)",
+                    border: isOpen ? "1px solid rgba(204,255,0,0.28)" : "1px solid rgba(255,255,255,0.048)",
                     boxShadow: isOpen ? "0 14px 36px rgba(0,0,0,0.5)" : "none",
                     transition: "background 0.22s, border-color 0.22s",
                   }}
                 >
-                  {/* Density accent bar — left side */}
+                  {/* Density accent bar */}
                   <div
                     className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-2xl"
                     style={{ background: `linear-gradient(to bottom, ${dc}, ${dc}44)` }}
                   />
 
                   <div className="p-4 pl-5">
-                    {/* ─ Card header ─ */}
+                    {/* Card header */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-
-                        {/* Name row */}
                         <div className="flex items-center gap-2 mb-1.5">
                           <div className="rank-badge">#{idx + 1}</div>
-                          <h4
-                            className="text-[13.5px] font-bold leading-tight truncate"
-                            style={{ color: "#f5f9f3" }}
-                          >
+                          <h4 className="text-[13.5px] font-bold leading-tight truncate" style={{ color: "#f5f9f3" }}>
                             {venue.name}
                           </h4>
                           {venue.trustLevel !== "community" && (
-                            <ShieldCheck
-                              className="w-3.5 h-3.5 flex-shrink-0"
-                              style={{ color: "#60a5fa" }}
-                              aria-label="Verified"
-                            />
+                            <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#60a5fa" }} aria-label="Verified" />
                           )}
                         </div>
-
-                        {/* Meta row */}
-                        <div
-                          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-mono"
-                          style={{ color: "#7a8a75" }}
-                        >
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-mono" style={{ color: "#7a8a75" }}>
                           <span className="flex items-center gap-1">
                             <MapPin className="w-2.5 h-2.5" style={{ color: "#ccff00" }} />
                             {venue.distanceKm} km
@@ -376,74 +456,45 @@ export default function DiscoverPage() {
                             <Users className="w-2.5 h-2.5" style={{ color: "#ccff00" }} />
                             {venue.density}
                           </span>
-                          <span
-                            className="px-1.5 py-0.5 rounded-md text-[9.5px]"
-                            style={{
-                              background: "rgba(255,255,255,0.05)",
-                              border: "1px solid rgba(255,255,255,0.07)",
-                              color: "#9aaa93",
-                            }}
-                          >
+                          <span className="px-1.5 py-0.5 rounded-md text-[9.5px]" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", color: "#9aaa93" }}>
                             {venue.affiliation}
                           </span>
                         </div>
                       </div>
 
-                      {/* Atmosphere badge */}
+                      {/* Atmosphere badge + bar */}
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
                         <div
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[12px] font-mono font-bold"
-                          style={{
-                            background: `${dc}18`,
-                            border: `1px solid ${dc}44`,
-                            color: dc,
-                          }}
+                          style={{ background: `${dc}18`, border: `1px solid ${dc}44`, color: dc }}
                         >
                           <Flame className="w-3.5 h-3.5" />
                           {venue.confidence}%
                         </div>
-                        {/* Mini density bar */}
-                        <div
-                          className="w-12 h-1.5 rounded-full overflow-hidden"
-                          style={{ background: "rgba(255,255,255,0.07)" }}
-                        >
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${dPct}%`,
-                              background: `linear-gradient(90deg, ${dc}88, ${dc})`,
-                            }}
-                          />
+                        <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                          <div className="h-full rounded-full" style={{ width: `${dPct}%`, background: `linear-gradient(90deg, ${dc}88, ${dc})` }} />
                         </div>
                       </div>
                     </div>
 
-                    {/* Stars + rating */}
+                    {/* Stars + route time */}
                     <div className="flex items-center gap-2 mt-2.5 text-[10px] font-mono" style={{ color: "#7a8a75" }}>
                       <div className="flex" style={{ color: "#fbbf24" }}>
-                        {[1,2,3,4,5].map((s) => (
-                          <Star key={s} className="w-3 h-3 fill-current" />
-                        ))}
+                        {[1,2,3,4,5].map((s) => <Star key={s} className="w-3 h-3 fill-current" />)}
                       </div>
                       <span style={{ color: "#c5d0c1" }}>{venue.rating}</span>
-                      <span style={{ color: "#7a8a75" }}>·</span>
+                      <span>·</span>
                       <span>{venue.routeTime}</span>
                     </div>
 
-                    {/* Collapsed: concierge teaser */}
+                    {/* Collapsed: RSVP concierge teaser */}
                     {!isOpen && (
                       <div
                         className="mt-2.5 px-3 py-2 rounded-xl flex items-start gap-2"
-                        style={{
-                          background: "rgba(204,255,0,0.04)",
-                          border: "1px solid rgba(204,255,0,0.1)",
-                        }}
+                        style={{ background: "rgba(204,255,0,0.04)", border: "1px solid rgba(204,255,0,0.1)" }}
                       >
-                        <span
-                          className="flex-shrink-0 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded"
-                          style={{ background: "rgba(204,255,0,0.12)", color: "#ccff00" }}
-                        >
-                          MC
+                        <span className="flex-shrink-0 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(204,255,0,0.12)", color: "#ccff00" }}>
+                          RSVP
                         </span>
                         <p className="text-[11px] leading-relaxed line-clamp-1" style={{ color: "#9aaa93" }}>
                           {venue.conciergeInsight}
@@ -454,13 +505,10 @@ export default function DiscoverPage() {
                     {/* Expand chevron */}
                     <ChevronDown
                       className="absolute top-4 right-4 w-4 h-4 transition-transform duration-200"
-                      style={{
-                        color: "rgba(255,255,255,0.2)",
-                        transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-                      }}
+                      style={{ color: "rgba(255,255,255,0.2)", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
                     />
 
-                    {/* ─ Expanded panel ─ */}
+                    {/* ─ Expanded concierge panel ─ */}
                     <AnimatePresence>
                       {isOpen && (
                         <motion.div
@@ -470,11 +518,8 @@ export default function DiscoverPage() {
                           transition={{ duration: 0.28, ease: [0.22,1,0.36,1] }}
                           className="overflow-hidden"
                         >
-                          <div
-                            className="mt-4 pt-4 space-y-4"
-                            style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-                          >
-                            {/* Concierge insight box */}
+                          <div className="mt-4 pt-4 space-y-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                            {/* RSVP Concierge box */}
                             <div
                               className="rounded-xl p-3.5 flex gap-3"
                               style={{
@@ -485,106 +530,61 @@ export default function DiscoverPage() {
                             >
                               <div
                                 className="flex-shrink-0 flex items-center justify-center rounded-lg text-[9px] font-mono font-extrabold"
-                                style={{
-                                  width: 30, height: 30,
-                                  background: "rgba(204,255,0,0.1)",
-                                  border: "1px solid rgba(204,255,0,0.3)",
-                                  color: "#ccff00",
-                                  letterSpacing: "0.05em",
-                                }}
+                                style={{ width: 30, height: 30, background: "rgba(204,255,0,0.1)", border: "1px solid rgba(204,255,0,0.3)", color: "#ccff00", letterSpacing: "0.05em" }}
                               >
                                 MC
                               </div>
                               <div className="flex-1">
-                                <span
-                                  className="block text-[9.5px] font-mono font-bold uppercase mb-1"
-                                  style={{ color: "#ccff00", letterSpacing: "0.15em" }}
-                                >
-                                  Concierge Insight
+                                <span className="block text-[9.5px] font-mono font-bold uppercase mb-1" style={{ color: "#ccff00", letterSpacing: "0.15em" }}>
+                                  Concierge Intelligence
                                 </span>
-                                <p className="text-xs leading-relaxed" style={{ color: "#d8e8d4" }}>
-                                  {venue.conciergeInsight}
-                                </p>
+                                <p className="text-xs leading-relaxed" style={{ color: "#d8e8d4" }}>{venue.conciergeInsight}</p>
                               </div>
                             </div>
 
-                            {/* Insights list */}
+                            {/* Insights */}
                             <div className="space-y-2.5">
-                              <span
-                                className="block text-[9.5px] font-mono font-bold uppercase"
-                                style={{ color: "#f59e0b", letterSpacing: "0.15em" }}
-                              >
-                                ⚡ Atmosphere & Amenities
-                              </span>
+                              <span className="block text-[9.5px] font-mono font-bold uppercase" style={{ color: "#f59e0b", letterSpacing: "0.15em" }}>⚡ Atmosphere & Amenities</span>
                               <ul className="space-y-2">
                                 {venue.insights.map((insight, i) => (
-                                  <li
-                                    key={i}
-                                    className="flex items-start gap-2.5 text-[11.5px] leading-relaxed"
-                                    style={{ color: "#b0bfac" }}
-                                  >
-                                    <span
-                                      className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                      style={{ background: "#ccff00", boxShadow: "0 0 4px #ccff0066" }}
-                                    />
+                                  <li key={i} className="flex items-start gap-2.5 text-[11.5px] leading-relaxed" style={{ color: "#b0bfac" }}>
+                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#ccff00", boxShadow: "0 0 4px #ccff0066" }} />
                                     {insight}
                                   </li>
                                 ))}
                               </ul>
                             </div>
 
-                            {/* Crowd density timeline */}
+                            {/* Density timeline */}
                             <div className="space-y-2">
-                              <div
-                                className="flex justify-between text-[9px] font-mono uppercase"
-                                style={{ color: "#7a8a75" }}
-                              >
+                              <div className="flex justify-between text-[9px] font-mono uppercase" style={{ color: "#7a8a75" }}>
                                 <span>Crowd Density Timeline</span>
                                 <span style={{ color: dc }}>{venue.density} Peak</span>
                               </div>
-
-                              {/* Bars */}
                               <div className="flex gap-1.5 items-end h-7">
-                                {([12, 35, 65, 100, 82] as const).map((h, i) => {
-                                  const labels = ["Pre", "K-30", "K-15", "K·O", "+45"];
-                                  const isKO   = i === 3;
-                                  return (
+                                {([12, 35, 65, 100, 82] as const).map((h, i) => (
+                                  <div key={i} className="flex-1">
                                     <div
-                                      key={i}
-                                      className="flex-1 flex flex-col items-center gap-0.5"
-                                    >
-                                      <div
-                                        className="w-full rounded-sm density-bar"
-                                        style={{
-                                          height: `${h}%`,
-                                          background: isKO
-                                            ? `linear-gradient(to top, ${dc}aa, ${dc})`
-                                            : h > 50
-                                            ? "rgba(204,255,0,0.2)"
-                                            : "rgba(255,255,255,0.07)",
-                                          boxShadow: isKO ? `0 0 8px ${dc}55` : "none",
-                                        }}
-                                      />
-                                    </div>
-                                  );
-                                })}
+                                      className="w-full rounded-sm density-bar"
+                                      style={{
+                                        height: `${h}%`,
+                                        background: i === 3 ? `linear-gradient(to top, ${dc}aa, ${dc})` : h > 50 ? "rgba(204,255,0,0.2)" : "rgba(255,255,255,0.07)",
+                                        boxShadow: i === 3 ? `0 0 8px ${dc}55` : "none",
+                                      }}
+                                    />
+                                  </div>
+                                ))}
                               </div>
                               <div className="flex justify-between text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
-                                {["Pre", "K-30", "K-15", "K·O", "+45"].map((t) => (
-                                  <span key={t}>{t}</span>
-                                ))}
+                                {["Pre", "K-30", "K-15", "K·O", "+45"].map((t) => <span key={t}>{t}</span>)}
                               </div>
                             </div>
 
-                            {/* CTA row */}
+                            {/* CTAs */}
                             <div className="flex gap-2 pt-0.5">
                               <button
                                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-colors"
-                                style={{
-                                  background: "rgba(255,255,255,0.055)",
-                                  border: "1px solid rgba(255,255,255,0.09)",
-                                  color: "#b0bfac",
-                                }}
+                                style={{ background: "rgba(255,255,255,0.055)", border: "1px solid rgba(255,255,255,0.09)", color: "#b0bfac" }}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Users className="w-4 h-4" style={{ color: "#ccff00" }} />
@@ -592,15 +592,11 @@ export default function DiscoverPage() {
                               </button>
                               <button
                                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-extrabold transition-all"
-                                style={{
-                                  background: "#ccff00",
-                                  color: "#060b03",
-                                  boxShadow: "0 4px 14px rgba(204,255,0,0.28)",
-                                }}
+                                style={{ background: "#ccff00", color: "#060b03", boxShadow: "0 4px 14px rgba(204,255,0,0.28)" }}
                                 onClick={(e) => handleVenueRoute(venue, e)}
                               >
                                 <Zap className="w-4 h-4" />
-                                Transit Route
+                                Get Directions
                               </button>
                             </div>
                           </div>
@@ -613,23 +609,6 @@ export default function DiscoverPage() {
             })}
           </div>
         )}
-      </div>
-
-      {/* ══ FAB ══ */}
-      <div className="fixed bottom-[calc(var(--bottom-nav-height)+14px)] right-4 z-40">
-        <motion.button
-          whileTap={{ scale: 0.93 }}
-          onClick={() => document.getElementById("concierge_calls_anchor")?.scrollIntoView({ behavior: "smooth" })}
-          className="flex items-center gap-2 px-5 py-3 rounded-full text-xs font-extrabold shadow-2xl cursor-pointer select-none"
-          style={{
-            background: "#ccff00",
-            color: "#060b03",
-            boxShadow: "0 0 24px rgba(204,255,0,0.4), 0 8px 20px rgba(0,0,0,0.3)",
-          }}
-        >
-          <ExternalLink className="w-4 h-4" />
-          Concierge Calls
-        </motion.button>
       </div>
     </div>
   );

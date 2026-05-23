@@ -498,11 +498,63 @@ export default function LivePage() {
           )}
         </div>
 
-        {/* ══ Other Fixtures ══ */}
-        <div className="pt-1">
-          <div className="label-mono flex items-center gap-1.5 mb-3">
-            🗓 Other Fixtures
+        {/* ══ Next Match Handoff ══ */}
+        {nextMatch && (
+          <div>
+            <div className="label-mono flex items-center gap-1.5 mb-3">🔜 Up Next — Handoff</div>
+            <motion.button
+              whileTap={{ scale: 0.985 }}
+              onClick={() => handleMatchSelect(nextMatch)}
+              className="w-full text-left rounded-2xl overflow-hidden cursor-pointer"
+              style={{
+                background: `linear-gradient(155deg, ${nextMatch.homeColor}20 0%, rgba(10,18,8,0.9) 50%, ${nextMatch.awayColor}16 100%)`,
+                border: `1px solid ${nextMatch.homeColor}40`,
+                boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
+              }}
+            >
+              <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${nextMatch.homeColor}, #ccff00 50%, ${nextMatch.awayColor})` }} />
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="chip chip-amber">🗓 Next Fixture · {nextMatch.time}</span>
+                  <span className="chip chip-sage">{nextMatch.league}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col items-center gap-2 flex-1">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center text-[28px]"
+                      style={{ background: `${nextMatch.homeColor}22`, border: `1.5px solid ${nextMatch.homeColor}44` }}>
+                      {nextMatch.homeFlag}
+                    </div>
+                    <span className="text-[12px] font-bold text-center" style={{ color: "#f5f9f3" }}>{nextMatch.homeTeam}</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5 px-2">
+                    <span className="text-[11px] font-mono font-bold" style={{ color: "#7a8a75" }}>vs</span>
+                    <div className="px-3 py-1 rounded-xl text-xs font-mono font-bold"
+                      style={{ background: "rgba(5,9,3,0.8)", border: "1px solid rgba(255,255,255,0.07)", color: "#f5f9f3" }}>
+                      {nextMatch.time}
+                    </div>
+                    <span className="text-[9.5px] font-mono" style={{ color: "#f59e0b" }}>Pre-match hubs open</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 flex-1">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center text-[28px]"
+                      style={{ background: `${nextMatch.awayColor}22`, border: `1.5px solid ${nextMatch.awayColor}44` }}>
+                      {nextMatch.awayFlag}
+                    </div>
+                    <span className="text-[12px] font-bold text-center" style={{ color: "#f5f9f3" }}>{nextMatch.awayTeam}</span>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-extrabold"
+                  style={{ background: "rgba(204,255,0,0.12)", border: "1px solid rgba(204,255,0,0.28)", color: "#ccff00" }}>
+                  <ArrowRight className="w-4 h-4" />
+                  Switch to this fixture — find venues now
+                </div>
+              </div>
+            </motion.button>
           </div>
+        )}
+
+        {/* ══ All Fixtures ══ */}
+        <div className="pt-1">
+          <div className="label-mono flex items-center gap-1.5 mb-3">🗓 All Fixtures</div>
           <div className="space-y-2">
             {MATCHES.filter((m) => m.id !== activeMatch.id).map((match) => (
               <motion.button
@@ -510,10 +562,7 @@ export default function LivePage() {
                 whileTap={{ scale: 0.985 }}
                 onClick={() => handleMatchSelect(match)}
                 className="w-full text-left rounded-2xl p-3.5 flex items-center justify-between transition-all cursor-pointer group"
-                style={{
-                  background: "rgba(10,18,8,0.55)",
-                  border: "1px solid rgba(255,255,255,0.055)",
-                }}
+                style={{ background: "rgba(10,18,8,0.55)", border: "1px solid rgba(255,255,255,0.055)" }}
               >
                 <div className="flex-1 min-w-0">
                   <span className="label-mono">{match.league}</span>
@@ -527,10 +576,8 @@ export default function LivePage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {match.status === "finished" ? (
-                    <span
-                      className="text-[11px] font-mono font-bold px-2.5 py-1.5 rounded-lg flex-shrink-0"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", color: "#9aaa93" }}
-                    >
+                    <span className="text-[11px] font-mono font-bold px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", color: "#9aaa93" }}>
                       {match.scoreHome}–{match.scoreAway}
                     </span>
                   ) : match.status === "live" ? (
