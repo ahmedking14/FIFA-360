@@ -11,6 +11,7 @@ import {
   ExternalLink, Star, AlertTriangle, ChevronDown, Clock, Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ConciergeCallSimulator } from "@/components/ConciergeCallSimulator";
 
 type Filter = "All" | "Verified Only" | "Near Me";
 
@@ -28,7 +29,6 @@ export default function DiscoverPage() {
   const [filter,     setFilter]     = useState<Filter>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading,    setLoading]    = useState(false);
-
   const activeMatch = selectedMatch ?? MATCHES.find((m) => m.status === "live") ?? MATCHES[0];
   const venues = getVenuesForMatch(activeMatch.id);
 
@@ -70,9 +70,24 @@ export default function DiscoverPage() {
 
   const densityPct  = (d: string) => ({ "Packed": 96, "High": 78, "Medium": 55, "Low": 32 }[d] ?? 50);
 
+  const callTargets = filtered.slice(0, 5);
+
+  const scrollToRankings = () => {
+    document.getElementById("venue_list_anchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="page-enter pb-6">
       <div className="page-container pt-5 space-y-5">
+
+        {/* ══ Signature: Venue Concierge Calls ══ */}
+        <div id="concierge_calls_anchor">
+          <ConciergeCallSimulator
+            key={`${activeMatch.id}-${callTargets.length}`}
+            venues={callTargets.length > 0 ? callTargets : venues.slice(0, 5)}
+            onComplete={scrollToRankings}
+          />
+        </div>
 
         {/* ══ Section header ══ */}
         <div className="flex items-center justify-between">
@@ -241,7 +256,7 @@ export default function DiscoverPage() {
         </div>
 
         {/* ══ List header — Verified Venue Ranking ══ */}
-        <div className="flex items-center justify-between">
+        <div id="venue_list_anchor" className="flex items-center justify-between scroll-mt-24">
           <div className="flex items-center gap-2">
             <span className="label-mono">Verified Venue Ranking</span>
             <span className="chip chip-blue" style={{ fontSize: "8px" }}>
@@ -252,38 +267,6 @@ export default function DiscoverPage() {
             <Flame className="w-3 h-3" style={{ color: "#f59e0b" }} />
             By Atmosphere
           </div>
-        </div>
-
-        {/* ══ Concierge AI Banner ══ */}
-        <div
-          className="rounded-2xl px-4 py-3 flex items-center gap-3"
-          style={{
-            background: "linear-gradient(120deg, rgba(204,255,0,0.08) 0%, rgba(10,18,8,0.7) 100%)",
-            border: "1px solid rgba(204,255,0,0.2)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-          }}
-        >
-          <div
-            className="flex items-center justify-center rounded-xl flex-shrink-0 font-mono font-extrabold text-[10px]"
-            style={{
-              width: 36, height: 36,
-              background: "rgba(204,255,0,0.12)",
-              border: "1px solid rgba(204,255,0,0.3)",
-              color: "#ccff00",
-              letterSpacing: "0.05em",
-            }}
-          >
-            MC
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-bold" style={{ color: "#f5f9f3" }}>
-              AI Venue Concierge <span className="gradient-text-neon">— Active</span>
-            </p>
-            <p className="text-[10px] mt-0.5 leading-relaxed" style={{ color: "#7a8a75" }}>
-              Real-time crowd intelligence, arrival timing &amp; insider tips — tap any venue to unlock.
-            </p>
-          </div>
-          <Zap className="w-4 h-4 flex-shrink-0" style={{ color: "#ccff00" }} />
         </div>
 
         {/* ══ Skeleton ══ */}
@@ -636,7 +619,7 @@ export default function DiscoverPage() {
       <div className="fixed bottom-[calc(var(--bottom-nav-height)+14px)] right-4 z-40">
         <motion.button
           whileTap={{ scale: 0.93 }}
-          onClick={() => document.getElementById("venue_list_anchor")?.scrollIntoView({ behavior: "smooth" })}
+          onClick={() => document.getElementById("concierge_calls_anchor")?.scrollIntoView({ behavior: "smooth" })}
           className="flex items-center gap-2 px-5 py-3 rounded-full text-xs font-extrabold shadow-2xl cursor-pointer select-none"
           style={{
             background: "#ccff00",
@@ -645,11 +628,9 @@ export default function DiscoverPage() {
           }}
         >
           <ExternalLink className="w-4 h-4" />
-          Check Venues
+          Concierge Calls
         </motion.button>
       </div>
-
-      <div id="venue_list_anchor" style={{ position: "absolute", top: 0 }} />
     </div>
   );
 }

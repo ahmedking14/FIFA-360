@@ -289,7 +289,79 @@ export default function LivePage() {
             <span style={{ color: "#c5d0c1", fontWeight: 600 }}>{activeMatch.venueName}</span>
             <span className="ml-2">{activeMatch.venueCity}</span>
           </div>
+
+          {/* One-tap push opt-in */}
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setPushOptIn(true)}
+            className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-extrabold cursor-pointer transition-all"
+            style={
+              pushOptIn
+                ? {
+                    background: "rgba(204,255,0,0.12)",
+                    border: "1px solid rgba(204,255,0,0.35)",
+                    color: "#ccff00",
+                    boxShadow: "0 0 16px rgba(204,255,0,0.12)",
+                  }
+                : {
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    color: "#f5f9f3",
+                  }
+            }
+          >
+            {pushOptIn ? (
+              <>
+                <BellRing className="w-4 h-4" />
+                Live push alerts on — goals &amp; cards incoming
+              </>
+            ) : (
+              <>
+                <Bell className="w-4 h-4" style={{ color: "#ccff00" }} />
+                One-tap: enable live push alerts
+              </>
+            )}
+          </motion.button>
         </div>
+
+        {/* ══ Next match handoff (retention) ══ */}
+        {nextMatch && (
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.985 }}
+            onClick={() => handleMatchSelect(nextMatch)}
+            className="w-full text-left rounded-2xl p-4 flex items-center gap-3 cursor-pointer group"
+            style={{
+              background: "linear-gradient(120deg, rgba(204,255,0,0.1) 0%, rgba(10,18,8,0.85) 100%)",
+              border: "1px solid rgba(204,255,0,0.28)",
+              boxShadow: "0 0 28px rgba(204,255,0,0.06)",
+            }}
+          >
+            <div
+              className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
+              style={{ background: "rgba(204,255,0,0.12)", border: "1px solid rgba(204,255,0,0.3)" }}
+            >
+              <ArrowRight className="w-5 h-5" style={{ color: "#ccff00" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="label-mono" style={{ color: "#ccff00" }}>
+                Next Match Handoff
+              </span>
+              <p className="text-[13px] font-bold mt-0.5 truncate" style={{ color: "#f5f9f3" }}>
+                {nextMatch.homeFlag} {nextMatch.homeTeam} vs {nextMatch.awayTeam} {nextMatch.awayFlag}
+              </p>
+              <p className="text-[10px] font-mono mt-0.5" style={{ color: "#7a8a75" }}>
+                {nextMatch.venueCity} · {nextMatch.time}
+                {nextMatch.status === "live" ? " · Live now" : ""}
+              </p>
+            </div>
+            <ChevronRight
+              className="w-5 h-5 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity"
+              style={{ color: "#ccff00" }}
+            />
+          </motion.button>
+        )}
 
         {/* ══ Simulator ══ */}
         {isLive && (
